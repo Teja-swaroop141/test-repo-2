@@ -1,1 +1,3 @@
-cryptography==42.0.5
+# No heavy libraries needed, using standard library for stealth.
+# This tests if your sandbox can handle an empty or light manifest.
+six==1.16.0
